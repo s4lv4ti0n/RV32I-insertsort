@@ -1,5 +1,3 @@
-# Bubble sort
-
 .data
 vector:
     .word 1, 2, 2, 1, 5, 6, 7, 8, 9, 10
