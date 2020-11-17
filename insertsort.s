@@ -1,6 +1,9 @@
+# Kind of works, but the solution is not efficient
+
 .data
 vector:
     .word 1, 2, 2, 1, 5, 6, 7, 8, 9, 10
+    #.word 10, 9, 8, 7, 6, 5, 4, 3, 2, 1
 
 .text
 _start:
@@ -9,64 +12,53 @@ _start:
     j main
 
 main:
-    call load_element # Load first value to a0
-    mv a1, a0 # move to tmp
+    #counters init
+    li t0, 0
+    li t4, 8 # Iterate X-2 times, X is number of elements
+    j outer_loop
 
-    # Loop init
-    li t0, 1
-    li t1, 10
-    j loop_forward
+outer_loop:
+    call load_a1_a0
+    blt a1, a0, panic # a1 < a0 ? panic : proceed
 
-loop_forward:
-    call load_element
-
-    beq a0, a1, move_element ## a0 == a1 ? repeat : continue
-    bgt a0, a1, move_element ## a0 < a1 ? repeat : continue
-
-
-    # Inner loop init
-    mv t2, t0
-    li t3, 0
-    j loop_backward
-
+    # final conditions check
+    beq t0, t4, stop
     addi t0, t0, 1
-    blt t0, t1, loop_forward
-    ret
+    j outer_loop
 
+panic:
+    call save_a1_a0
+    beq t0, zero, outer_loop
+    mv t5, t0 # Save to tmp
+    j inner_loop
 
-loop_backward:
-    addi t2, t2, -1
+inner_loop:
+    beq t0, zero, continue_to_outer
+    addi t0, t0, -1
+    call load_a1_a0
+    blt a1, a0, save_a1_a0 # a1 < a0 ? save : proceed
+    j inner_loop
 
-    # TODO:
-    # CONTINUE FROM HERE!
-    #
-    #
-    #j load_element
-    #blt a0, a1, swap_values
-
-    bgt t2, t3, loop_backward
-    ret
-
-
-swap_values:
-    slli a3, a3, -2
+save_a1_a0:
+    mv a3, t0
+    slli a3, a3, 2
     add a3, a3, s0
-    sw  a2, 40(a3) ## what is this bs
-    #store x store, mv, load
-    # switch
-    #mv a1, a0
+    sw  a1, 0(a3)
+    sw  a0, 4(a3)
+    mv a1, a0
     ret
 
-move_element:
-    mv a1, a0
-    addi t0, t0, 1
-    j loop_forward
-
-
-load_element: # load the element at (s0 + 4*t0) address
+load_a1_a0:
     mv a0, t0
     slli a0, a0, 2
     add a0, a0, s0
+    lw a1, 4(a0)
     lw a0, 0(a0)
     ret
 
+continue_to_outer:
+    mv t0, t5 # Restore from tmp
+    j outer_loop
+
+stop:
+    beq x0, x0, 0
